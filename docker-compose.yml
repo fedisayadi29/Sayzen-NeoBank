@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sayzen-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - JWT_SECRET=dev-secret-key-change-in-production
+      - LOG_LEVEL=info
+      - RATE_LIMIT_ENABLED=false
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/database.db:/app/database.db
+      - ./backend/logs:/app/logs
+    networks:
+      - sayzen-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sayzen-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api
+      - REACT_APP_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - sayzen-network
+    restart: unless-stopped
+
+networks:
+  sayzen-network:
+    driver: bridge
+
+volumes:
+  backend-db:
+  backend-logs:

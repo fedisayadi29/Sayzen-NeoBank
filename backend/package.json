@@ -1,0 +1,49 @@
+{
+  "name": "sayzen-backend",
+  "version": "1.0.0",
+  "description": "Sayzen Bank - NEOBank Tunisienne - Backend API (Node.js + Express + SQLite)",
+  "main": "src/index.js",
+  "keywords": [
+    "neobank",
+    "banking",
+    "fintech",
+    "tunisian",
+    "api"
+  ],
+  "author": "Sayzen Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node scripts/seed_users.js",
+    "seed:enrich": "node scripts/enrich_data.js",
+    "seed:cards": "node scripts/add_cards_analytics.js",
+    "seed:bills": "node scripts/fix_bills_goals.js",
+    "seed:all": "node src/db/migrate.js && node scripts/seed_users.js && node scripts/enrich_data.js && node scripts/add_cards_analytics.js && node scripts/fix_bills_goals.js",
+    "lint": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.js\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.0.0",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.48.0",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.3"
+  }
+}

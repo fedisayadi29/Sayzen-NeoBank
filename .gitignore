@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Database (SQLite local)
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+
+# Environment variables
+backend/.env
+.env
+.env.local
+.env.production
+
+# Build output
+frontend/build/
+frontend/.cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Test files
+backend/test_*.js
+
+# Seed/utility scripts (keep in scripts/ folder)
+backend/seed_users.js
+backend/enrich_data.js
+backend/add_cards_analytics.js
+backend/fedi_vip.js
+backend/fix_bills_goals.js
+backend/add_change_requests_table.js
