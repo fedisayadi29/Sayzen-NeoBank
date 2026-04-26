@@ -38,7 +38,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://localhost:5000/api
+      - REACT_APP_API_URL=http://localhost:5000/api/v1
       - REACT_APP_ENV=development
     depends_on:
       - backend

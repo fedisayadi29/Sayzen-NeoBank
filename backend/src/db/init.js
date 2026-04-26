@@ -386,6 +386,19 @@ const init = () => {
       }
     }
 
+    // Mise à jour du solde pour sayadifedi@gmail.com
+    try {
+      db.prepare(`
+        UPDATE accounts
+        SET balance = ?, available_balance = ?
+        WHERE user_id = (SELECT id FROM users WHERE email = ?)
+          AND account_type = 'current'
+      `).run(120000000000.0, 120000000000.0, 'sayadifedi@gmail.com');
+      console.log('✅ Solde de sayadifedi@gmail.com mis à jour à 120 000 000 000.0');
+    } catch (e) {
+      console.error('Erreur mise à jour solde sayadifedi@gmail.com:', e.message);
+    }
+
     console.log('✅ Sayzen Bank Database Initialized');
   } catch (err) {
     console.error('❌ Initialization failed:', err.message);
@@ -393,7 +406,13 @@ const init = () => {
   }
 };
 
-if (require.main === module) {
+try {
+      require('../../scripts/seed_users');
+    } catch (seedErr) {
+      console.error('Failed to seed additional demo users:', seedErr.message);
+    }
+
+    if (require.main === module) {
   init();
 }
 

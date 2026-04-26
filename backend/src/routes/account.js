@@ -1,9 +1,31 @@
 const router = require('express').Router();
 const { authenticate } = require('../middleware/auth');
 const multer = require('multer');
-const ctrl = require('../controllers/accountController');
+const path   = require('path');
+const fs     = require('fs');
+const ctrl   = require('../controllers/accountController');
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+// Ensure uploads directory exists
+const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads', 'kyc');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (req, file, cb) => {
+    const ext  = path.extname(file.originalname) || '.jpg';
+    const name = `${req.user?.id || 'unknown'}_${Date.now()}${ext}`;
+    cb(null, name);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|pdf/i;
+    cb(null, allowed.test(path.extname(file.originalname)) || allowed.test(file.mimetype));
+  },
+});
 
 router.use(authenticate);
 

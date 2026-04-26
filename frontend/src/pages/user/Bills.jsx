@@ -1,15 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { Zap, Droplets, Wifi, Phone, Tv, Music, Youtube, Shield, GraduationCap, Heart, Bus, ParkingCircle, CheckCircle, Clock, Send } from 'lucide-react';
+import { Zap, Droplets, Wifi, Phone, Tv, Music, ShoppingBag, Car, Home, GraduationCap, CheckCircle, Send } from 'lucide-react';
 
 const BILLERS = [
-  { code:'STEG001',    name:'STEG',              category:'Énergie',    Icon: Zap,           color:'#f59e0b' },
-  { code:'SONEDE001',  name:'SONEDE',            category:'Eau',        Icon: Droplets,      color:'#06b6d4' },
-  { code:'TOPNET001',  name:'Topnet',            category:'Internet',   Icon: Wifi,          color:'#6366f1' },
-  { code:'OOREDOO001', name:'Ooredoo',           category:'Télécom',    Icon: Phone,         color:'#ef4444' },
-  { code:'TUNTEL001',  name:'Tunisie Telecom',   category:'Télécom',    Icon: Phone,         color:'#10b981' },
-  { code:'ORANGE001',  name:'Orange Tunisie',    category:'Télécom',    Icon: Phone,         color:'#f97316' },
+  // Énergie & Eau
+  { code:'STEG001',     name:'STEG',              category:'Énergie',      Icon: Zap,           color:'#f59e0b' },
+  { code:'SONEDE001',   name:'SONEDE',            category:'Eau',          Icon: Droplets,      color:'#06b6d4' },
+  // Internet & Télécom
+  { code:'TOPNET001',   name:'Topnet',            category:'Internet',     Icon: Wifi,          color:'#6366f1' },
+  { code:'HEXABYTE001', name:'Hexabyte',          category:'Internet',     Icon: Wifi,          color:'#8b5cf6' },
+  { code:'OOREDOO001',  name:'Ooredoo',           category:'Télécom',      Icon: Phone,         color:'#ef4444' },
+  { code:'TUNTEL001',   name:'Tunisie Telecom',   category:'Télécom',      Icon: Phone,         color:'#10b981' },
+  { code:'ORANGE001',   name:'Orange Tunisie',    category:'Télécom',      Icon: Phone,         color:'#f97316' },
+  // Streaming & Loisirs
+  { code:'NETFLIX001',  name:'Netflix',           category:'Streaming',    Icon: Tv,            color:'#dc2626' },
+  { code:'SPOTIFY001',  name:'Spotify',           category:'Musique',      Icon: Music,         color:'#16a34a' },
+  { code:'CANAL001',    name:'Canal+',            category:'Streaming',    Icon: Tv,            color:'#1d4ed8' },
+  // Assurances & Services
+  { code:'STAR001',     name:'STAR Assurances',   category:'Assurance',    Icon: ShoppingBag,   color:'#0891b2' },
+  { code:'GAT001',      name:'GAT Assurances',    category:'Assurance',    Icon: ShoppingBag,   color:'#7c3aed' },
+  // Transport & Logement
+  { code:'TRANSTU001',  name:'Transtu',           category:'Transport',    Icon: Car,           color:'#0284c7' },
+  { code:'ONAS001',     name:'ONAS',              category:'Assainissement', Icon: Home,        color:'#65a30d' },
+  // Éducation
+  { code:'UNIV001',     name:'Frais universitaires', category:'Éducation', Icon: GraduationCap, color:'#9333ea' },
 ];
 
 const OPERATORS = ['Ooredoo', 'Tunisie Telecom', 'Orange Tunisie'];

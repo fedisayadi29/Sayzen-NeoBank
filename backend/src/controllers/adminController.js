@@ -89,7 +89,7 @@ exports.getUserDetail = async (req, res) => {
        WHERE a.user_id=?`,
       [req.params.id]
     );
-    const docs  = await pool.query('SELECT id,doc_type,file_name,ai_confidence,status,created_at FROM kyc_documents WHERE user_id=?', [req.params.id]);
+    const docs  = await pool.query('SELECT id,doc_type,file_name,file_url,ai_confidence,status,rejection_reason,created_at FROM kyc_documents WHERE user_id=?', [req.params.id]);
     const changeRequests = await pool.query(
       'SELECT * FROM profile_change_requests WHERE user_id=? ORDER BY created_at DESC',
       [req.params.id]
@@ -374,6 +374,72 @@ exports.getUserAnalytics = async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ message: 'Erreur serveur' }); }
 };
 
+// ── KYC DOCUMENT REVIEW ───────────────────────────────────────────────────────
+exports.reviewKycDocument = async (req, res) => {
+  const { status, rejection_reason } = req.body;
+  if (!['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ message: 'Statut invalide' });
+  }
+  try {
+    const doc = await pool.query('SELECT * FROM kyc_documents WHERE id=?', [req.params.id]);
+    if (!doc.rows[0]) return res.status(404).json({ message: 'Document introuvable' });
+
+    await pool.query(
+      `UPDATE kyc_documents SET status=?, rejection_reason=?, reviewed_by=?, reviewed_at=datetime('now') WHERE id=?`,
+      [status, rejection_reason || null, req.user.id, req.params.id]
+    );
+
+    const userId = doc.rows[0].user_id;
+
+    // Recompute user KYC status based on all documents
+    const allDocs = await pool.query(
+      `SELECT status FROM kyc_documents WHERE user_id=?`,
+      [userId]
+    );
+    const docs = allDocs.rows;
+    const anyRejected  = docs.some(d => d.status === 'rejected');
+    const allApproved  = docs.length > 0 && docs.every(d => d.status === 'approved');
+    const anyPending   = docs.some(d => d.status === 'pending');
+
+    let newKycStatus = 'in_review';
+    if (allApproved)  newKycStatus = 'verified';
+    if (anyRejected)  newKycStatus = 'rejected';
+    if (anyPending && !anyRejected) newKycStatus = 'in_review';
+
+    await pool.query(
+      `UPDATE users SET kyc_status=?, updated_at=datetime('now') WHERE id=?`,
+      [newKycStatus, userId]
+    );
+
+    // Notify user
+    const docLabels = {
+      cin_front: 'CIN (Recto)', cin_back: 'CIN (Verso)',
+      passport: 'Passeport', selfie: 'Selfie', proof_address: 'Justificatif de domicile'
+    };
+    const label = docLabels[doc.rows[0].doc_type] || doc.rows[0].doc_type;
+    const notifMsg = status === 'approved'
+      ? `Votre document "${label}" a été approuvé ✅`
+      : `Votre document "${label}" a été rejeté.${rejection_reason ? ' Motif: ' + rejection_reason : ''}`;
+
+    await pool.query(
+      `INSERT INTO notifications (id,user_id,title,message,type) VALUES (?,?,?,?,?)`,
+      [randomUUID(), userId, 'Vérification KYC', notifMsg, status === 'approved' ? 'success' : 'error']
+    );
+
+    if (newKycStatus === 'verified') {
+      await pool.query(
+        `INSERT INTO notifications (id,user_id,title,message,type) VALUES (?,?,?,?,?)`,
+        [randomUUID(), userId, 'Identité vérifiée ✅', 'Félicitations ! Votre identité a été entièrement vérifiée. Votre compte est maintenant pleinement activé.', 'success']
+      );
+    }
+
+    res.json({ message: `Document ${status === 'approved' ? 'approuvé' : 'rejeté'}`, kyc_status: newKycStatus });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
 // ── USER ACCESS LOGS ──────────────────────────────────────────────────────────
 exports.getUserAccessLogs = async (req, res) => {
   try {
@@ -382,5 +448,30 @@ exports.getUserAccessLogs = async (req, res) => {
       [req.params.id]
     );
     res.json(r.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+};
+
+// ── ADMIN NOTIFICATIONS ───────────────────────────────────────────────────────
+exports.getAdminNotifications = async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT * FROM admin_notifications WHERE admin_id=? ORDER BY created_at DESC LIMIT 50`,
+      [req.user.id]
+    );
+    res.json(r.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+};
+
+exports.markAdminNotifRead = async (req, res) => {
+  try {
+    await pool.query('UPDATE admin_notifications SET is_read=1 WHERE id=? AND admin_id=?', [req.params.id, req.user.id]);
+    res.json({ message: 'Lu' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+};
+
+exports.markAllAdminNotifsRead = async (req, res) => {
+  try {
+    await pool.query('UPDATE admin_notifications SET is_read=1 WHERE admin_id=?', [req.user.id]);
+    res.json({ message: 'Toutes les notifications marquées comme lues' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 };

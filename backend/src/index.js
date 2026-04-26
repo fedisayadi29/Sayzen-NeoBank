@@ -1,8 +1,3 @@
-/**
- * Sayzen Bank - API Main Entry Point
- * Initializes Express server with middleware, routes, and database
- */
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -13,9 +8,6 @@ const logger = require('./utils/logger');
 
 const app = express();
 
-// ====================================
-// Middleware Configuration
-// ====================================
 
 // Security Headers
 if (process.env.HELMET_ENABLED !== 'false') {
@@ -35,10 +27,11 @@ app.use(cors(corsOptions));
 if (process.env.RATE_LIMIT_ENABLED !== 'false') {
   const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-    message: 'Too many requests from this IP, please try again later.',
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '2000'),
+    message: { message: 'Trop de requêtes, veuillez réessayer dans quelques minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => req.path === '/api/health',
   });
   app.use('/api/', limiter);
 }
@@ -46,6 +39,12 @@ if (process.env.RATE_LIMIT_ENABLED !== 'false') {
 // Body Parsing
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
+
+// Static file serving — KYC uploads
+const path = require('path');
+const uploadsPath = path.join(__dirname, '..', 'uploads');
+logger.info(`Serving uploads from: ${uploadsPath}`);
+app.use('/uploads', express.static(uploadsPath, { fallthrough: false }));
 
 // Request Logging
 app.use((req, res, next) => {
@@ -61,8 +60,8 @@ const apiVersion = process.env.API_VERSION || 'v1';
 const apiBase = `/api/${apiVersion}`;
 
 app.use(`${apiBase}/auth`, require('./routes/auth'));
-app.use(`${apiBase}/accounts`, require('./routes/account'));
-app.use(`${apiBase}/users`, require('./routes/user'));
+app.use(`${apiBase}/user`, require('./routes/account'));
+app.use(`${apiBase}/user`, require('./routes/user'));
 app.use(`${apiBase}/admin`, require('./routes/admin'));
 app.use(`${apiBase}/chatbot`, require('./routes/chatbot'));
 
@@ -115,7 +114,7 @@ app.use((err, req, res, next) => {
 
 async function start() {
   try {
-    // Initialize database
+    // Initialize database 
     await init();
     logger.info('Database initialized successfully');
 
@@ -123,8 +122,8 @@ async function start() {
     const NODE_ENV = process.env.NODE_ENV || 'development';
 
     app.listen(PORT, () => {
-      logger.info(`✅ Sayzen Bank API running on port ${PORT} [${NODE_ENV}]`);
-      logger.info(`📍 Base URL: http://localhost:${PORT}${apiBase}`);
+      logger.info(`Sayzen Bank API running on port ${PORT} [${NODE_ENV}]`);
+      logger.info(`Base URL: http://localhost:${PORT}${apiBase}`);
     });
   } catch (err) {
     logger.error('Failed to start server', err);

@@ -21,6 +21,10 @@ frontend/.cache/
 *.log
 npm-debug.log*
 yarn-debug.log*
+backend/logs/
+
+# User uploads (KYC documents — never commit)
+backend/uploads/
 
 # OS files
 .DS_Store
@@ -30,13 +34,9 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 
-# Test files
-backend/test_*.js
-
-# Seed/utility scripts (keep in scripts/ folder)
-backend/seed_users.js
-backend/enrich_data.js
-backend/add_cards_analytics.js
-backend/fedi_vip.js
-backend/fix_bills_goals.js
-backend/add_change_requests_table.js
+# Temporary / debug scripts (never commit these)
+backend/tmp_*.js
+backend/fix_*.js
+backend/check_*.js
+backend/reset_*.js
+backend/seed_*.js

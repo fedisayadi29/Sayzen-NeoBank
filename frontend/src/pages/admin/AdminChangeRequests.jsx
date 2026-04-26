@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { CheckCircle, XCircle, Clock, User, MapPin, Phone } from 'lucide-react';
+import { CheckCircle, XCircle, User, MapPin, Phone } from 'lucide-react';
 
 export default function AdminChangeRequests() {
   const [requests, setRequests] = useState([]);

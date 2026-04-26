@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { Search, CheckCircle, XCircle, Eye, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Eye, CheckCircle, XCircle } from 'lucide-react';
 
 const SEV_COLORS = { low:'#10b981', medium:'#f59e0b', high:'#ef4444', critical:'#dc2626' };
 const STATUS_COLORS = { open:'#ef4444', investigating:'#f59e0b', resolved:'#10b981', false_positive:'#64748b' };

@@ -35,13 +35,13 @@ router.post('/message', async (req, res) => {
         ? "Vous n'avez pas de crédit en cours. Rendez-vous dans **Crédits** pour faire une demande."
         : `Vous avez ${loans.rows.length} crédit(s) : ${loans.rows.map(l => `${l.loan_type} (${l.status})`).join(', ')}.`;
     } else {
-      response = "Je suis **Zara**, votre assistante Sayzen Bank. Demandez-moi votre solde, vos transactions, vos crédits ou comment utiliser l'application !";
+      response = "Je suis **SayzenBot**, votre assistant Sayzen Bank. Demandez-moi votre solde, vos transactions, vos crédits ou comment utiliser l'application !";
     }
 
     res.json({ response });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ response: "Désolée, je rencontre une difficulté technique. Réessayez dans un instant." });
+    res.status(500).json({ response: "Désolé, je rencontre une difficulté technique. Réessayez dans un instant." });
   }
 });
 

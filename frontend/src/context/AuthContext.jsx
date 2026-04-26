@@ -1,18 +1,21 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/axios';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // On mount: restore session from token
   useEffect(() => {
     const token = localStorage.getItem('sayzen_token');
     if (token) {
       api.get('/auth/me')
         .then(r => setUser(r.data))
-        .catch(() => localStorage.removeItem('sayzen_token'))
+        .catch(() => {
+          localStorage.removeItem('sayzen_token');
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -39,13 +42,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const refreshUser = async () => {
-    const r = await api.get('/auth/me');
-    setUser(r.data);
+    try {
+      const r = await api.get('/auth/me');
+      setUser(r.data);
+    } catch (_) {}
   };
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

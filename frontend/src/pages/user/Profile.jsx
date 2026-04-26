@@ -30,13 +30,11 @@ export default function Profile() {
   const [accounts, setAccounts] = useState([]);
   const [phoneError, setPhoneError] = useState('');
 
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     Promise.all([
       api.get('/user/profile/change-requests').then(r => setChangeRequests(r.data)).catch(() => {}),
       api.get('/user/accounts').then(r => setAccounts(r.data)).catch(() => {}),
-    ]).finally(() => setLoading(false));
+    ]);
   }, []);
 
   const primaryAccount = accounts.find(acc => acc.account_type === 'current') || accounts[0];

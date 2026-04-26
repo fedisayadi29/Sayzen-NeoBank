@@ -1,7 +1,3 @@
-/**
- * Logger Utility
- * Provides structured logging across the application
- */
 
 const fs = require('fs');
 const path = require('path');

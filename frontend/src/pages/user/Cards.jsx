@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { Globe, Wifi, Lock, Unlock, Settings } from 'lucide-react';
+import { Globe, Wifi, Lock, Unlock } from 'lucide-react';
 
 export default function Cards() {
   const [cards, setCards] = useState([]);

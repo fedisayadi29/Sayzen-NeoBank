@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { CheckCircle, XCircle, Search, ChevronDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 const STATUS_COLORS = { pending:'#f59e0b', under_review:'#3b82f6', approved:'#10b981', rejected:'#ef4444', disbursed:'#a78bfa', active:'#10b981', closed:'#64748b' };
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, TrendingUp, Activity, Shield, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, MapPin, CreditCard, TrendingUp, Shield, IdCard, FileText, Camera, Home, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function UserDetail() {
@@ -60,6 +60,20 @@ export default function UserDetail() {
       setUser({ ...user, is_locked: !user.is_locked });
     } catch (err) {
       alert('Erreur lors de la modification du verrouillage');
+    }
+  };
+
+  const handleReviewDoc = async (docId, status, reason = '') => {
+    try {
+      const r = await api.patch(`/admin/kyc-documents/${docId}/review`, {
+        status,
+        rejection_reason: reason || undefined,
+      });
+      // Refresh user data to get updated KYC status and documents
+      await loadUserData();
+      alert(r.data.message + (r.data.kyc_status ? ` — KYC: ${r.data.kyc_status}` : ''));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Erreur lors de la révision');
     }
   };
 
@@ -317,18 +331,106 @@ export default function UserDetail() {
 
         {documents.length > 0 && (
           <div style={s.docsCard}>
-            <h3 style={s.sectionTitle}>Documents KYC</h3>
+            <h3 style={s.sectionTitle}>Documents KYC — Vérification d'identité</h3>
             <div style={s.docsGrid}>
-              {documents.map(doc => (
-                <div key={doc.id} style={s.docItem}>
-                  <div style={s.docTag}>{doc.doc_type.toUpperCase()}</div>
-                  <p style={s.docName}>{doc.file_name || 'Fichier non renseigné'}</p>
-                  <p style={s.docStatus}>
-                    Statut: <strong>{doc.status}</strong>
-                  </p>
-                  <p style={s.docDate}>{new Date(doc.created_at).toLocaleDateString('fr-TN')}</p>
-                </div>
-              ))}
+              {documents.map(doc => {
+                const docConfig = {
+                  cin_front:     { label:'CIN (Recto)',              Icon: IdCard,   color:'#6366f1' },
+                  cin_back:      { label:'CIN (Verso)',              Icon: IdCard,   color:'#8b5cf6' },
+                  passport:      { label:'Passeport',                Icon: FileText, color:'#10b981' },
+                  selfie:        { label:'Selfie',                   Icon: Camera,   color:'#f59e0b' },
+                  proof_address: { label:'Justificatif de domicile', Icon: Home,     color:'#06b6d4' },
+                };
+                const cfg = docConfig[doc.doc_type] || { label: doc.doc_type, Icon: FileText, color:'#64748b' };
+                const statusColors = { pending:'#f59e0b', approved:'#10b981', rejected:'#ef4444' };
+                const statusLabels = { pending:'En attente', approved:'Approuvé', rejected:'Rejeté' };
+                const imgUrl = doc.file_url ? `http://localhost:5000${doc.file_url}` : null;
+                const isPdf  = doc.file_name?.toLowerCase().endsWith('.pdf');
+                
+                return (
+                  <div key={doc.id} style={s.kycDocCard}>
+                    {/* Header with icon + status */}
+                    <div style={s.kycDocHeader}>
+                      <div style={{ ...s.kycDocIcon, background: cfg.color+'15', color: cfg.color }}>
+                        <cfg.Icon size={20} strokeWidth={2} />
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <p style={s.kycDocLabel}>{cfg.label}</p>
+                        <p style={s.kycDocDate}>{new Date(doc.created_at).toLocaleDateString('fr-TN', { day:'2-digit', month:'short', year:'numeric' })}</p>
+                      </div>
+                      <span style={{ ...s.kycStatusBadge, background: (statusColors[doc.status]||'#e8edf8')+'20', color: statusColors[doc.status]||'#374151' }}>
+                        {statusLabels[doc.status] || doc.status}
+                      </span>
+                    </div>
+
+                    {/* Image preview */}
+                    {imgUrl && !isPdf && (
+                      <a href={imgUrl} target="_blank" rel="noreferrer" style={s.kycPreviewWrap}>
+                        <img src={imgUrl} alt={cfg.label} style={s.kycPreviewImg}
+                          onError={e => { e.target.style.display='none'; e.target.nextElementSibling.style.display='flex'; }} />
+                        <div style={{ ...s.kycNoFile, display:'none' }}>Fichier introuvable</div>
+                        <div style={s.kycPreviewOverlay}>
+                          <Eye size={20} color="#fff" />
+                          <span>Voir le document</span>
+                        </div>
+                      </a>
+                    )}
+                    {imgUrl && isPdf && (
+                      <a href={imgUrl} target="_blank" rel="noreferrer" style={s.kycPdfBtn}>
+                        <FileText size={16} style={{ marginRight:'6px' }} />
+                        Ouvrir le PDF
+                      </a>
+                    )}
+                    {!imgUrl && (
+                      <div style={s.kycNoFile}>
+                        <FileText size={24} color="#cbd5e1" />
+                        <span>Document non disponible</span>
+                      </div>
+                    )}
+
+                    {/* AI Score */}
+                    {doc.ai_confidence > 0 && (
+                      <div style={s.kycAiScore}>
+                        <span style={s.kycAiLabel}>Score IA</span>
+                        <div style={s.kycAiBar}>
+                          <div style={{ ...s.kycAiBarFill, width:`${doc.ai_confidence}%`, background: doc.ai_confidence >= 80 ? '#10b981' : doc.ai_confidence >= 60 ? '#f59e0b' : '#ef4444' }} />
+                        </div>
+                        <span style={s.kycAiVal}>{doc.ai_confidence}%</span>
+                      </div>
+                    )}
+
+                    {/* Rejection reason */}
+                    {doc.rejection_reason && (
+                      <div style={s.kycRejection}>
+                        <XCircle size={14} style={{ flexShrink:0 }} />
+                        <span>{doc.rejection_reason}</span>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    {doc.status === 'pending' && imgUrl && (
+                      <div style={s.kycActions}>
+                        <button style={s.kycApproveBtn} onClick={() => handleReviewDoc(doc.id, 'approved')}>
+                          <CheckCircle size={16} style={{ marginRight:'6px' }} />
+                          Approuver
+                        </button>
+                        <button style={s.kycRejectBtn} onClick={() => {
+                          const reason = prompt('Motif du rejet (optionnel):');
+                          if (reason !== null) handleReviewDoc(doc.id, 'rejected', reason || 'Document non conforme');
+                        }}>
+                          <XCircle size={16} style={{ marginRight:'6px' }} />
+                          Rejeter
+                        </button>
+                      </div>
+                    )}
+                    {doc.status === 'pending' && !imgUrl && (
+                      <div style={s.kycWaiting}>
+                        En attente de soumission par le client
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -700,6 +802,201 @@ const s = {
     marginBottom: '24px',
     boxShadow: '0 4px 8px rgba(99,102,241,0.06)',
   },
+  kycDocCard: {
+    background: '#fff',
+    border: '1px solid #e8edf8',
+    borderRadius: '16px',
+    padding: '18px',
+    boxShadow: '0 2px 8px rgba(99,102,241,0.04)',
+    transition: 'all 0.2s',
+  },
+  kycDocHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '14px',
+  },
+  kycDocIcon: {
+    width: '42px',
+    height: '42px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  kycDocLabel: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: '2px',
+  },
+  kycDocDate: {
+    fontSize: '11px',
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  kycStatusBadge: {
+    padding: '4px 12px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+  },
+  kycPreviewWrap: {
+    display: 'block',
+    position: 'relative',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    marginBottom: '12px',
+    cursor: 'pointer',
+    border: '1px solid #e8edf8',
+  },
+  kycPreviewImg: {
+    width: '100%',
+    height: '180px',
+    objectFit: 'cover',
+    display: 'block',
+  },
+  kycPreviewOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'rgba(0,0,0,0)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: '700',
+    transition: 'background 0.2s',
+    opacity: 0,
+  },
+  kycPdfBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '14px',
+    background: '#eff6ff',
+    border: '1px solid #bfdbfe',
+    borderRadius: '12px',
+    color: '#2563eb',
+    fontSize: '13px',
+    fontWeight: '700',
+    textDecoration: 'none',
+    marginBottom: '12px',
+  },
+  kycNoFile: {
+    height: '120px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    background: '#f8faff',
+    borderRadius: '12px',
+    border: '1px dashed #e8edf8',
+    color: '#94a3b8',
+    fontSize: '12px',
+    fontWeight: '500',
+    marginBottom: '12px',
+  },
+  kycAiScore: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '10px 12px',
+    background: '#f5f3ff',
+    borderRadius: '10px',
+    marginBottom: '10px',
+  },
+  kycAiLabel: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#374151',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  kycAiBar: {
+    flex: 1,
+    height: '6px',
+    background: '#e8edf8',
+    borderRadius: '3px',
+    overflow: 'hidden',
+  },
+  kycAiBarFill: {
+    height: '100%',
+    borderRadius: '3px',
+    transition: 'width 0.5s',
+  },
+  kycAiVal: {
+    fontSize: '12px',
+    fontWeight: '800',
+    color: '#6366f1',
+  },
+  kycRejection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 12px',
+    background: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '10px',
+    color: '#dc2626',
+    fontSize: '12px',
+    fontWeight: '500',
+    marginBottom: '10px',
+  },
+  kycActions: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  kycApproveBtn: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '11px',
+    background: 'linear-gradient(135deg,#10b981,#059669)',
+    border: 'none',
+    borderRadius: '10px',
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(16,185,129,0.25)',
+    transition: 'all 0.2s',
+  },
+  kycRejectBtn: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '11px',
+    background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+    border: 'none',
+    borderRadius: '10px',
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(239,68,68,0.25)',
+    transition: 'all 0.2s',
+  },
+  kycWaiting: {
+    padding: '10px 12px',
+    background: '#fffbeb',
+    border: '1px solid #fde68a',
+    borderRadius: '10px',
+    color: '#92400e',
+    fontSize: '12px',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: '10px',
+  },
   sectionTitle: {
     fontSize: '16px',
     fontWeight: '700',
@@ -708,14 +1005,36 @@ const s = {
   },
   docsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '14px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '16px',
   },
   docItem: {
     padding: '16px',
     background: '#f8faff',
     borderRadius: '14px',
     border: '1px solid #e8edf8',
+  },
+  docPreviewWrap: {
+    display: 'block', position: 'relative', borderRadius: '10px', overflow: 'hidden',
+    cursor: 'pointer', textDecoration: 'none',
+  },
+  docPreviewImg: {
+    width: '100%', height: '140px', objectFit: 'cover', display: 'block', borderRadius: '10px',
+  },
+  docPreviewOverlay: {
+    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '13px',
+    fontWeight: '700', transition: 'background 0.2s',
+  },
+  docPdfLink: {
+    display: 'block', padding: '12px', background: '#eff6ff', borderRadius: '10px',
+    color: '#2563eb', fontSize: '13px', fontWeight: '700', textDecoration: 'none',
+    textAlign: 'center', marginBottom: '4px',
+  },
+  docNoPreview: {
+    height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: '#f0f4ff', borderRadius: '10px', color: '#94a3b8', fontSize: '12px',
+    fontWeight: '500', marginBottom: '4px',
   },
   docTag: {
     display: 'inline-block',

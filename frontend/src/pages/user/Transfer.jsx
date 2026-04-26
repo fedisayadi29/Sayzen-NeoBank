@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { Zap, Globe, Building2, Send, UserPlus, Trash2, Info, Clock } from 'lucide-react';
+import { Zap, Globe, Building2, Send } from 'lucide-react';
 
 const TRANSFER_TYPES = [
   { value:'transfer_internal',   label:'Virement interne Sayzen',    desc:'Instantané · Gratuit',       Icon: Zap },

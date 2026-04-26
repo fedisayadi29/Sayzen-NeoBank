@@ -61,10 +61,25 @@ const demoAcc = db.prepare("SELECT id,rib FROM accounts WHERE account_type='curr
 const allAccIds = [];
 
 users.forEach((u, idx) => {
-  const uid = randomUUID();
+  // Check if user already exists
+  let existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(u.email);
+  let uid;
   const score = 650 + Math.floor(Math.random() * 150);
-  insertUser.run(uid, u.first, u.last, u.email, pwd, u.phone, u.cin,
-    `${10 + idx} Rue Habib Bourguiba`, u.city, u.gov, u.dob, u.gender, score, 'low');
+  if (existingUser) {
+    uid = existingUser.id;
+    // Ensure existing seeded users have the expected password and are unlocked
+    db.prepare(`
+      UPDATE users
+      SET password = ?, login_attempts = 0, is_locked = 0,
+          kyc_status = 'verified', face_verified = 1, doc_verified = 1,
+          credit_score = ?, risk_level = 'low', is_active = 1
+      WHERE email = ?
+    `).run(pwd, score, u.email);
+  } else {
+    uid = randomUUID();
+    insertUser.run(uid, u.first, u.last, u.email, pwd, u.phone, u.cin,
+      `${10 + idx} Rue Habib Bourguiba`, u.city, u.gov, u.dob, u.gender, score, 'low');
+  }
 
   // Current account
   const rib1 = `10006000${(30 + idx).toString().padStart(3,'0')}${(ts + idx).toString().slice(-9)}47`;

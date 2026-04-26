@@ -1,6 +1,7 @@
 const pool = require('../db/pool');
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('crypto');
+const notifyAdmin = require('../utils/notifyAdmin');
 
 const genRef = (p='SAY') => `${p}${Date.now()}${Math.random().toString(36).slice(2,6).toUpperCase()}`;
 
@@ -185,6 +186,15 @@ exports.updateProfile = async (req, res) => {
          VALUES (?,?,?,?,?)`,
         [randomUUID(), req.user.id, 'Demande de modification soumise', `Vos modifications (${sensitiveChanges.map(c=>c.label).join(', ')}) sont en attente de validation par l'administrateur.`, 'info']
       );
+      // Notify admin
+      const userInfo3 = await pool.query('SELECT first_name, last_name FROM users WHERE id=?', [req.user.id]);
+      const u3 = userInfo3.rows[0];
+      await notifyAdmin(
+        'Demande de modification de profil',
+        `${u3?.first_name} ${u3?.last_name} demande à modifier : ${sensitiveChanges.map(c=>c.label).join(', ')}.`,
+        'warning',
+        `/admin/change-requests`
+      );
       
       // Update non-sensitive fields immediately
       await pool.query(
@@ -345,18 +355,59 @@ exports.getSavingsGoals = async (req, res) => {
 };
 
 exports.createSavingsGoal = async (req, res) => {
-  const { name, target_amount, target_date, auto_save, auto_save_amount, account_id } = req.body;
+  const { name, target_amount, target_date, auto_save, auto_save_amount } = req.body;
   if (!name || !target_amount) return res.status(400).json({ message: 'Données manquantes' });
+  
+  const client = await pool.connect();
   try {
-    const id = randomUUID();
-    await pool.query(
+    await client.query('BEGIN');
+    
+    // Auto-create a dedicated savings account for this goal
+    const ts = Date.now();
+    const rib = `10006000${Math.floor(Math.random()*1000).toString().padStart(3,'0')}${ts.toString().slice(-9)}47`;
+    const iban = `TN59${rib}`;
+    const accNum = `TN${ts.toString().slice(-10)}${Math.floor(Math.random()*99).toString().padStart(2,'0')}`;
+    const accId = randomUUID();
+    
+    await client.query(
+      `INSERT INTO accounts (id,user_id,account_number,rib,iban,balance,available_balance,currency,account_type,interest_rate)
+       VALUES (?,?,?,?,?,0.0,0.0,'TND','savings',3.5)`,
+      [accId, req.user.id, accNum, rib, iban]
+    );
+    
+    // Create the savings goal linked to the new account
+    const goalId = randomUUID();
+    await client.query(
       `INSERT INTO savings_goals (id,user_id,account_id,name,target_amount,target_date,auto_save,auto_save_amount)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [id, req.user.id, account_id||null, name, target_amount, target_date||null, auto_save ? 1 : 0, auto_save_amount||0]
+      [goalId, req.user.id, accId, name, target_amount, target_date||null, auto_save ? 1 : 0, auto_save_amount||0]
     );
-    const r = await pool.query('SELECT * FROM savings_goals WHERE id=?', [id]);
-    res.status(201).json(r.rows[0]);
-  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+    
+    // Notify user with account details
+    await client.query(
+      `INSERT INTO notifications (id,user_id,title,message,type) VALUES (?,?,?,?,?)`,
+      [randomUUID(), req.user.id, 'Compte d\'épargne créé 🎯',
+       `Votre objectif "${name}" est actif. Un compte d'épargne dédié a été créé.\n\nRIB: ${rib}\nIBAN: ${iban}\nTaux: 3.5% par an`,
+       'success']
+    );
+    
+    await client.query('COMMIT');
+    
+    const goal = await pool.query('SELECT * FROM savings_goals WHERE id=?', [goalId]);
+    const account = await pool.query('SELECT * FROM accounts WHERE id=?', [accId]);
+    
+    res.status(201).json({
+      goal: goal.rows[0],
+      account: account.rows[0],
+      message: `Objectif créé avec succès. Compte d'épargne dédié : ${rib}`
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  } finally {
+    client.release();
+  }
 };
 
 // ── LOANS ─────────────────────────────────────────────────────────────────────
@@ -398,6 +449,15 @@ exports.applyLoan = async (req, res) => {
       `INSERT INTO notifications (id,user_id,title,message,type) VALUES (?,?,?,?,?)`,
       [randomUUID(), req.user.id, 'Demande de crédit reçue 📋', `Votre demande de ${parseFloat(amount_requested).toFixed(3)} TND est en cours d'analyse.`, 'info']
     );
+    // Notify admin
+    const userInfo2 = await pool.query('SELECT first_name, last_name FROM users WHERE id=?', [req.user.id]);
+    const u2 = userInfo2.rows[0];
+    await notifyAdmin(
+      'Nouvelle demande de crédit',
+      `${u2?.first_name} ${u2?.last_name} a soumis une demande de crédit ${loan_type} de ${parseFloat(amount_requested).toFixed(3)} TND.`,
+      'info',
+      `/admin/loans`
+    );
     const loan = await pool.query('SELECT * FROM loans WHERE id=?', [id]);
     res.status(201).json(loan.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ message: 'Erreur serveur' }); }
@@ -408,12 +468,13 @@ exports.uploadKycDoc = async (req, res) => {
   const { doc_type } = req.body;
   if (!doc_type) return res.status(400).json({ message: 'Type de document requis' });
   try {
-    const fileName = req.file ? req.file.originalname : `${doc_type}_${Date.now()}.jpg`;
+    const fileName  = req.file ? req.file.originalname : `${doc_type}_${Date.now()}.jpg`;
+    const fileUrl   = req.file ? `/uploads/kyc/${req.file.filename}` : null;
     const aiConfidence = Math.floor(75 + Math.random() * 25);
     const id = randomUUID();
     await pool.query(
-      `INSERT INTO kyc_documents (id,user_id,doc_type,file_name,ai_confidence,status) VALUES (?,?,?,?,?,'pending')`,
-      [id, req.user.id, doc_type, fileName, aiConfidence]
+      `INSERT INTO kyc_documents (id,user_id,doc_type,file_name,file_url,ai_confidence,status) VALUES (?,?,?,?,?,?,'pending')`,
+      [id, req.user.id, doc_type, fileName, fileUrl, aiConfidence]
     );
     if (['cin_front','cin_back','passport'].includes(doc_type)) {
       await pool.query("UPDATE users SET doc_verified=1, kyc_status='in_review', updated_at=datetime('now') WHERE id=?", [req.user.id]);
@@ -421,15 +482,25 @@ exports.uploadKycDoc = async (req, res) => {
     if (doc_type === 'selfie') {
       await pool.query("UPDATE users SET face_verified=1, updated_at=datetime('now') WHERE id=?", [req.user.id]);
     }
+    // Notify admin
+    const userInfo = await pool.query('SELECT first_name, last_name FROM users WHERE id=?', [req.user.id]);
+    const u = userInfo.rows[0];
+    const docLabels = { cin_front:'CIN (Recto)', cin_back:'CIN (Verso)', passport:'Passeport', selfie:'Selfie', proof_address:'Justificatif de domicile' };
+    await notifyAdmin(
+      'Nouveau document KYC soumis',
+      `${u?.first_name} ${u?.last_name} a soumis un document : ${docLabels[doc_type] || doc_type}.`,
+      'warning',
+      `/admin/users/${req.user.id}`
+    );
     const doc = await pool.query('SELECT * FROM kyc_documents WHERE id=?', [id]);
     res.json({ message: 'Document soumis avec succès', document: doc.rows[0] });
-  } catch (err) { res.status(500).json({ message: 'Erreur upload' }); }
+  } catch (err) { console.error(err); res.status(500).json({ message: 'Erreur upload' }); }
 };
 
 exports.getKycDocuments = async (req, res) => {
   try {
     const r = await pool.query(
-      'SELECT id,doc_type,file_name,ai_confidence,status,rejection_reason,created_at FROM kyc_documents WHERE user_id=? ORDER BY created_at DESC',
+      'SELECT id,doc_type,file_name,file_url,ai_confidence,status,rejection_reason,created_at FROM kyc_documents WHERE user_id=? ORDER BY created_at DESC',
       [req.user.id]
     );
     res.json(r.rows);

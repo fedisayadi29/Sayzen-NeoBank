@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { Car, Home, GraduationCap, Briefcase, User, Calculator, FileText, TrendingUp, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Car, Home, GraduationCap, Briefcase, User, TrendingUp } from 'lucide-react';
 
 const LOAN_TYPES = [
   { value:'personal',  label:'Crédit personnel',      Icon: User,           rate:8.5,  maxAmount:50000,  maxMonths:84  },

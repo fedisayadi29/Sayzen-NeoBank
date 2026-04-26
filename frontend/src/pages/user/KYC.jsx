@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
-import { IdCard, FileText, Camera, Home, CheckCircle, Clock, XCircle, Upload, RefreshCw, Brain, ScanLine, ShieldCheck, Scale } from 'lucide-react';
+import { IdCard, FileText, Camera, Home, CheckCircle, Clock, XCircle, Upload, RefreshCw, ScanLine, ShieldCheck, Scale } from 'lucide-react';
 
 const DOC_TYPES = [
   { value:'cin_front',     label:'CIN (Recto)',              Icon: IdCard,   desc:"Face avant de votre Carte d'Identité Nationale" },
@@ -117,9 +117,14 @@ export default function KYC() {
                 {existing && (
                   <div style={s.docExisting}>
                     <span style={s.docFileName}>{existing.file_name}</span>
-                    {existing.ai_confidence > 0 && (
-                      <span style={s.aiScore}>IA: {existing.ai_confidence}%</span>
-                    )}
+                    <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                      {existing.ai_confidence > 0 && (
+                        <span style={s.aiScore}>IA: {existing.ai_confidence}%</span>
+                      )}
+                      {!existing.file_url && (
+                        <span style={{ fontSize:'10px', color:'#d97706', fontWeight:'600' }}>Re-soumettre</span>
+                      )}
+                    </div>
                   </div>
                 )}
 

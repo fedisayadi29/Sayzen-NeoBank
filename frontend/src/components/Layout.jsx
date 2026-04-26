@@ -46,12 +46,16 @@ export default function Layout({ children, title }) {
   const nav = isAdmin ? adminNav : userNav;
 
   useEffect(() => {
-    if (!isAdmin) {
-      api.get('/user/notifications').then(r => {
-        setNotifs(r.data.slice(0,5));
+    const fetchNotifs = () => {
+      const endpoint = isAdmin ? '/admin/notifications' : '/user/notifications';
+      api.get(endpoint).then(r => {
+        setNotifs(r.data.slice(0, 10));
         setUnread(r.data.filter(n => !n.is_read).length);
       }).catch(() => {});
-    }
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 10000); // poll every 10s
+    return () => clearInterval(interval);
   }, [isAdmin]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -125,34 +129,69 @@ export default function Layout({ children, title }) {
             {title && <h1 style={s.pageTitle}>{title}</h1>}
           </div>
           <div style={s.headerRight}>
-            {!isAdmin && (
-              <div style={{ position:'relative' }}>
-                <button style={s.notifBtn} onClick={() => setNotifOpen(!notifOpen)}>
-                  <Bell size={18} />
-                  {unread > 0 && <span style={s.badge}>{unread}</span>}
-                </button>
-                {notifOpen && (
-                  <div style={s.notifDropdown} className="animate-slideDown">
-                    <div style={s.notifHeader}>
-                      <span>Notifications</span>
-                      {unread > 0 && <span style={s.notifCount}>{unread} nouvelles</span>}
-                    </div>
-                    {notifs.length === 0
-                      ? <p style={s.notifEmpty}>Aucune notification</p>
-                      : notifs.map(n => (
-                        <div key={n.id} style={{ ...s.notifItem, opacity: n.is_read ? 0.6 : 1 }}>
-                          <div style={s.notifDot(n.type)} />
-                          <div>
-                            <div style={s.notifTitle}>{n.title}</div>
-                            <div style={s.notifMsg}>{n.message}</div>
+            <div style={{ position:'relative' }}>
+              <button style={s.notifBtn} onClick={() => {
+                const opening = !notifOpen;
+                setNotifOpen(opening);
+                if (opening) {
+                  // Refresh immediately on open
+                  const endpoint = isAdmin ? '/admin/notifications' : '/user/notifications';
+                  api.get(endpoint).then(r => {
+                    setNotifs(r.data.slice(0, 10));
+                    setUnread(r.data.filter(n => !n.is_read).length);
+                  }).catch(() => {});
+                }
+              }}>
+                <Bell size={18} />
+                {unread > 0 && <span style={s.badge}>{unread > 9 ? '9+' : unread}</span>}
+              </button>
+              {notifOpen && (
+                <div style={s.notifDropdown} className="animate-slideDown">
+                  <div style={s.notifHeader}>
+                    <span style={{ fontWeight:'700', color:'#0f172a' }}>Notifications</span>
+                    {unread > 0 && (
+                      <button style={{ background:'none', border:'none', fontSize:'11px', color:'#6366f1', fontWeight:'600', cursor:'pointer' }}
+                        onClick={() => {
+                          const endpoint = isAdmin ? '/admin/notifications/read-all' : '/user/notifications/read-all';
+                          api.patch(endpoint).then(() => {
+                            setUnread(0);
+                            setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
+                          }).catch(() => {});
+                        }}>
+                        Tout marquer lu
+                      </button>
+                    )}
+                  </div>
+                  {notifs.length === 0
+                    ? <p style={s.notifEmpty}>Aucune notification</p>
+                    : notifs.map(n => (
+                      <div key={n.id}
+                        style={{ ...s.notifItem, opacity: n.is_read ? 0.55 : 1, cursor: n.link ? 'pointer' : 'default', background: n.is_read ? 'transparent' : '#fafbff' }}
+                        onClick={() => {
+                          // Mark individual as read
+                          if (!n.is_read) {
+                            const endpoint = isAdmin ? `/admin/notifications/${n.id}/read` : `/user/notifications/${n.id}/read`;
+                            api.patch(endpoint).catch(() => {});
+                            setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: 1 } : x));
+                            setUnread(prev => Math.max(0, prev - 1));
+                          }
+                          if (n.link) window.location.href = n.link;
+                        }}>
+                        <div style={s.notifDot(n.type)} />
+                        <div style={{ flex:1 }}>
+                          <div style={s.notifTitle}>{n.title}</div>
+                          <div style={s.notifMsg}>{n.message}</div>
+                          <div style={{ fontSize:'10px', color:'#94a3b8', marginTop:'3px' }}>
+                            {new Date(n.created_at).toLocaleString('fr-TN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
                           </div>
                         </div>
-                      ))
-                    }
-                  </div>
-                )}
-              </div>
-            )}
+                        {!n.is_read && <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#6366f1', flexShrink:0, marginTop:'4px' }} />}
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
             <div style={s.headerUser}>
               <div style={s.headerAvatar}>{user?.first_name?.[0]}{user?.last_name?.[0]}</div>
               <div>

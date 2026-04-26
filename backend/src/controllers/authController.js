@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomUUID } = require('crypto');
 const pool = require('../db/pool');
+const notifyAdmin = require('../utils/notifyAdmin');
 
 const genRIB = () => {
   const ts = Date.now().toString().slice(-9);
@@ -77,6 +78,15 @@ exports.register = async (req, res) => {
 
     const user = { id: userId, first_name, last_name, email, phone, role: 'user', kyc_status: 'pending' };
     const token = jwt.sign({ id: userId, role: 'user' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+
+    // Notify admins of new registration
+    await notifyAdmin(
+      'Nouveau client inscrit',
+      `${first_name} ${last_name} (${email}) vient de créer un compte.`,
+      'info',
+      `/admin/users/${userId}`
+    );
+
     res.status(201).json({ token, user });
   } catch (err) {
     console.error('Register error:', err);

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
-import { Eye, DollarSign, PauseCircle, PlayCircle, Lock, Unlock, Search, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Eye, DollarSign, PauseCircle, PlayCircle, Lock, Unlock, Search, CheckCircle, XCircle } from 'lucide-react';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);

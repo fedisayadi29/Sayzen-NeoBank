@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, MapPin, Calendar, ChevronRight, ChevronLeft, Shield } from 'lucide-react';
+import { ChevronLeft, Shield } from 'lucide-react';
 
 const GOVERNORATES = ['Ariana','Béja','Ben Arous','Bizerte','Gabès','Gafsa','Jendouba','Kairouan','Kasserine','Kébili','Kef','Mahdia','Manouba','Médenine','Monastir','Nabeul','Sfax','Sidi Bouzid','Siliana','Sousse','Tataouine','Tozeur','Tunis','Zaghouan'];
 
@@ -36,7 +36,8 @@ export default function Register() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const { confirm_password, ...data } = form;
+      // eslint-disable-next-line no-unused-vars
+      const { confirm_password: _cp, ...data } = form;
       await register(data);
       navigate('/dashboard');
     } catch (err) {
