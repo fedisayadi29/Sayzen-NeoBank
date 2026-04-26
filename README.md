@@ -89,14 +89,6 @@ npm start               # Démarrer sur http://localhost:3000
 |------|-------|-------------|
 | Admin | `admin@sayzen.tn` | `Sayzen@Admin2024` |
 | Client | `demo@sayzen.tn` | `Demo@123456` |
-| Client VIP | `sayadifedi@gmail.com` | `Sayzen@2024` |
-| Client | `amenallah@sayzen.tn` | `Sayzen@2024` |
-| Client | `firyal@sayzen.tn` | `Sayzen@2024` |
-| Client | `arij@sayzen.tn` | `Sayzen@2024` |
-| Client | `yasmin@sayzen.tn` | `Sayzen@2024` |
-| Client | `medfahd@sayzen.tn` | `Sayzen@2024` |
-| Client | `medali@sayzen.tn` | `Sayzen@2024` |
-| Client | `ahmed@sayzen.tn` | `Sayzen@2024` |
 
 ---
 
