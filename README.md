@@ -9,7 +9,7 @@
 
 ---
 
-## ✨ Fonctionnalités
+## Fonctionnalités
 
 ### Côté Client
 - **Authentification** — Inscription/Connexion sécurisée avec JWT, verrouillage après 5 tentatives
@@ -83,7 +83,7 @@ npm start               # Démarrer sur http://localhost:3000
 
 ---
 
-## 🔑 Comptes de démonstration
+## Comptes de démonstration
 
 | Rôle | Email | Mot de passe |
 |------|-------|-------------|
@@ -92,7 +92,7 @@ npm start               # Démarrer sur http://localhost:3000
 
 ---
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 neobank/
@@ -161,7 +161,7 @@ neobank/
 
 ---
 
-## 🌐 API Endpoints
+## API Endpoints
 
 ### Auth
 | Méthode | Endpoint | Description |
@@ -232,7 +232,7 @@ neobank/
 
 ## 📄 Licence
 
-MIT © 2024 Sayzen Bank — Projet éducatif / démonstration
+MIT © 2026 Sayzen Bank — Projet éducatif 
 
 ---
 
