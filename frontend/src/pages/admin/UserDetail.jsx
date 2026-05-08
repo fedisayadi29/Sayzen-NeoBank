@@ -20,7 +20,7 @@ export default function UserDetail() {
 
   useEffect(() => {
     loadUserData();
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserData = async () => {
     try {
