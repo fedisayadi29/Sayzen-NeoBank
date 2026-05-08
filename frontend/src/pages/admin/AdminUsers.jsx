@@ -20,7 +20,7 @@ export default function AdminUsers() {
       .then(r => setUsers(r.data)).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchUsers(); }, [search, kycFilter]);
+  useEffect(() => { fetchUsers(); }, [search, kycFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleStatus = async (id) => {
     try { await api.patch(`/admin/users/${id}/toggle`); fetchUsers(); setMsg({ text:'Statut mis à jour', type:'success' }); }
